@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>食材ペアリング・フレーバー成分リファレンス</title>
+<script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-orange-950 min-h-screen p-4">
+<div class="max-w-2xl mx-auto">
+  <h1 class="text-2xl font-bold text-orange-300 text-center mb-1">食材ペアリング</h1>
+  <p class="text-orange-500 text-center text-sm mb-4">フレーバー成分リファレンス — 共有化合物で発見するペア</p>
+
+  <div class="mb-4">
+    <label class="sr-only" for="search-input">食材を検索</label>
+    <input id="search-input" type="text" placeholder="食材を検索（例：チョコレート）" class="w-full bg-orange-900 text-white rounded-xl p-3 border border-orange-700 focus:border-orange-400 outline-none" oninput="filterIngredients()" aria-label="食材を検索">
+  </div>
+
+  <div class="grid grid-cols-2 md:grid-cols-3 gap-2 mb-6" id="ingredient-grid"></div>
+
+  <div id="detail" class="hidden bg-orange-900 rounded-2xl p-5">
+    <h2 id="detail-name" class="text-2xl font-bold text-orange-200 mb-1"></h2>
+    <p id="detail-category" class="text-orange-400 text-xs mb-3"></p>
+    <div class="mb-3">
+      <h3 class="text-orange-300 text-sm font-bold mb-1">主要フレーバー成分</h3>
+      <div id="detail-compounds" class="flex flex-wrap gap-1"></div>
+    </div>
+    <h3 class="text-orange-300 text-sm font-bold mb-2">おすすめペアリング</h3>
+    <div id="detail-pairings" class="space-y-2"></div>
+  </div>
+</div>
+
+<script>
+const ingredients = [
+  { name:'チョコレート', emoji:'🍫', category:'スイーツ', compounds:['ピラジン','テオブロミン','バニリン','酢酸'], pairings:[
+    { name:'ブルーチーズ', reason:'ピラジンを共有。複雑な焙煎風味が重なる' },
+    { name:'コーヒー', reason:'ピラジン・酸を共有。苦みと深みが相乗' },
+    { name:'牛肉', reason:'メイラード反応由来のピラジンが共鳴' },
+  ]},
+  { name:'コーヒー', emoji:'☕', category:'飲料', compounds:['ピラジン','フルフリルアルコール','酢酸','ゲアニルアセテート'], pairings:[
+    { name:'バニラ', reason:'フルフリルアルコールと甘み成分が調和' },
+    { name:'チョコレート', reason:'ピラジンと苦みの重なり' },
+    { name:'カルダモン', reason:'スパイシーな香りが複雑さを高める' },
+  ]},
+  { name:'苺', emoji:'🍓', category:'果物', compounds:['フラネオール','酢酸エチル','メタノール','γ-デカラクトン'], pairings:[
+    { name:'バジル', reason:'フラネオールとフルーティ成分が調和' },
+    { name:'バルサミコ酢', reason:'γ-デカラクトンと酸の組み合わせ' },
+    { name:'胡椒', reason:'芳香族成分が苺の甘みを引き立て' },
+  ]},
+  { name:'バニラ', emoji:'🌼', category:'スパイス', compounds:['バニリン','ヘリオトロピン','酢酸','フルフリルアルコール'], pairings:[
+    { name:'牛乳', reason:'バニリンと乳脂肪が溶け合う' },
+    { name:'コーヒー', reason:'フルフリルアルコールを共有' },
+    { name:'チョコレート', reason:'バニリンが甘みの橋渡し' },
+  ]},
+  { name:'鮭', emoji:'🐟', category:'魚介', compounds:['トリメチルアミン','δ-バレロラクトン','ジメチルスルフィド'], pairings:[
+    { name:'ディル', reason:'テルペンが魚臭を中和・補完' },
+    { name:'ケッパー', reason:'酸味成分が脂肪の旨みを引き立て' },
+    { name:'マンゴー', reason:'δ-ラクトンで熱帯フルーティペアが成立' },
+  ]},
+  { name:'トマト', emoji:'🍅', category:'野菜', compounds:['シス-3-ヘキセナール','リモネン','イソバレルアルデヒド'], pairings:[
+    { name:'バジル', reason:'シス-3-ヘキセナールを共有。クラシックな組み合わせ' },
+    { name:'モッツァレラ', reason:'乳酸と旨み成分が補完' },
+    { name:'アンチョビ', reason:'グルタミン酸×グルタミン酸で旨み倍増' },
+  ]},
+  { name:'バジル', emoji:'🌿', category:'ハーブ', compounds:['リナロール','ユーゲノール','シス-3-ヘキセナール'], pairings:[
+    { name:'トマト', reason:'緑の香りと旨みの古典的ペア' },
+    { name:'苺', reason:'フルーティ成分とハーブ感の調和' },
+    { name:'白身魚', reason:'リナロールが魚の繊細な香りを引き立て' },
+  ]},
+  { name:'卵', emoji:'🥚', category:'その他', compounds:['ジメチルスルフィド','ジアセチル','テトラメチルピラジン'], pairings:[
+    { name:'トリュフ', reason:'ジメチルスルフィドとジメチルスルフィドが共鳴' },
+    { name:'バター', reason:'ジアセチルを共有。クリーミーさが増幅' },
+    { name:'マッシュルーム', reason:'うまみ成分と硫黄化合物の調和' },
+  ]},
+  { name:'ラム酒', emoji:'🥃', category:'飲料', compounds:['酢酸エチル','ジアセチル','フルフリルアルコール'], pairings:[
+    { name:'バナナ', reason:'酢酸エチルを共有。熱帯フルーティ感が増幅' },
+    { name:'バニラ', reason:'フルフリルアルコールと甘み成分が溶け合う' },
+    { name:'ライム', reason:'酸とエステルのコントラストがカクテルの定番' },
+  ]},
+  { name:'マッシュルーム', emoji:'🍄', category:'野菜', compounds:['1-オクテン-3-オール','ジメチルスルフィド','テアニン'], pairings:[
+    { name:'牛肉', reason:'旨み成分（グルタミン酸）の相乗効果' },
+    { name:'卵', reason:'硫黄化合物と旨みが重なる' },
+    { name:'胡桃', reason:'木質系の香りとアーシーな成分が共鳴' },
+  ]},
+  { name:'レモン', emoji:'🍋', category:'果物', compounds:['リモネン','シトラール','テルピネン'], pairings:[
+    { name:'生姜', reason:'テルペン系化合物を共有' },
+    { name:'ハーブ全般', reason:'リモネンが香り立ちを橋渡し' },
+    { name:'ブルーベリー', reason:'酸がベリーの甘みを引き締め' },
+  ]},
+  { name:'生姜', emoji:'🫚', category:'スパイス', compounds:['ジンゲロール','シネオール','シトラール'], pairings:[
+    { name:'レモン', reason:'シトラールを共有。柑橘×スパイス' },
+    { name:'チョコレート', reason:'スパイシーな対比が複雑さを生む' },
+    { name:'鮭', reason:'魚の臭みを中和しつつ香りを重ねる' },
+  ]},
+  { name:'黒胡椒', emoji:'🫙', category:'スパイス', compounds:['ピペリン','δ-3-カレン','リモネン'], pairings:[
+    { name:'苺', reason:'ピペリンが果実の香りを引き立て' },
+    { name:'マンゴー', reason:'δ-3-カレンとテルペンの熱帯系ペア' },
+    { name:'ラム酒', reason:'スパイシー感がアルコールの甘みを引き締め' },
+  ]},
+  { name:'マンゴー', emoji:'🥭', category:'果物', compounds:['カルボン','γ-オクタラクトン','δ-3-カレン','テルピネン'], pairings:[
+    { name:'黒胡椒', reason:'δ-3-カレンとテルペンが共鳴' },
+    { name:'ライム', reason:'酸×甘みの熱帯系クラシック' },
+    { name:'鮭', reason:'δ-ラクトンで旨みと甘みが橋渡し' },
+  ]},
+  { name:'ブルーベリー', emoji:'🫐', category:'果物', compounds:['ネロール','酢酸エチル','フラネオール'], pairings:[
+    { name:'レモン', reason:'酸が甘みを引き締め' },
+    { name:'バニラ', reason:'フラネオールと甘みの重なり' },
+    { name:'バジル', reason:'ハーブ感がベリーの複雑さを高める' },
+  ]},
+  { name:'牛肉', emoji:'🥩', category:'肉', compounds:['ピラジン','フラン','ジメチルスルフィド','テアニン'], pairings:[
+    { name:'マッシュルーム', reason:'グルタミン酸の旨み相乗' },
+    { name:'チョコレート', reason:'ピラジンを共有。メキシコモレソース的' },
+    { name:'赤ワイン', reason:'タンニンが脂肪を緩和、旨みが共鳴' },
+  ]},
+  { name:'ブルーチーズ', emoji:'🧀', category:'乳製品', compounds:['ピラジン','メチルケトン','酢酸','フェニルアセトアルデヒド'], pairings:[
+    { name:'チョコレート', reason:'ピラジンを共有。意外性のある組み合わせ' },
+    { name:'洋梨', reason:'フェニルアセトアルデヒドが花果実感を橋渡し' },
+    { name:'胡桃', reason:'木質系と熟成チーズの風味が調和' },
+  ]},
+  { name:'洋梨', emoji:'🍐', category:'果物', compounds:['酢酸アミル','フェニルアセトアルデヒド','ジアセチル'], pairings:[
+    { name:'ブルーチーズ', reason:'花香成分が塩味を引き立て' },
+    { name:'バニラ', reason:'ジアセチルとクリーミーさが溶け合う' },
+    { name:'生姜', reason:'スパイシーな対比が洋梨の甘みを際立たせる' },
+  ]},
+  { name:'ライム', emoji:'🟢', category:'果物', compounds:['リモネン','ネロール','シトラール','γ-テルピネン'], pairings:[
+    { name:'生姜', reason:'テルペン系の共鳴' },
+    { name:'マンゴー', reason:'熱帯フルーツ×酸の定番' },
+    { name:'ラム酒', reason:'シトラールとアルコールのカクテル古典' },
+  ]},
+  { name:'胡桃', emoji:'🫙', category:'ナッツ', compounds:['ピラジン','フルフリルアルコール','ヘキサナール'], pairings:[
+    { name:'マッシュルーム', reason:'木質系香りが共鳴' },
+    { name:'洋梨', reason:'ヘキサナールが果実の青草感と調和' },
+    { name:'ブルーチーズ', reason:'ナッツの油脂がチーズの鋭さを丸める' },
+  ]},
+];
+
+let filtered = [...ingredients];
+let selectedIdx = -1;
+
+function filterIngredients() {
+  const q = document.getElementById('search-input').value.trim();
+  filtered = ingredients.filter(i => i.name.includes(q) || i.category.includes(q));
+  renderGrid();
+}
+
+function renderGrid() {
+  const grid = document.getElementById('ingredient-grid');
+  grid.innerHTML = ''; // xss-ok: static template, no user input
+  filtered.forEach((ing, i) => {
+    const btn = document.createElement('button');
+    btn.className = 'bg-orange-800 hover:bg-orange-700 rounded-xl p-3 text-left transition border-2 ' +
+      (selectedIdx === ingredients.indexOf(ing) ? 'border-orange-400' : 'border-transparent');
+    const emojiDiv = document.createElement('div');
+    emojiDiv.className = 'text-2xl';
+    emojiDiv.textContent = ing.emoji;
+    const nameDiv = document.createElement('div');
+    nameDiv.className = 'text-orange-200 text-sm font-semibold mt-1';
+    nameDiv.textContent = ing.name;
+    const catDiv = document.createElement('div');
+    catDiv.className = 'text-orange-500 text-xs';
+    catDiv.textContent = ing.category;
+    btn.appendChild(emojiDiv);
+    btn.appendChild(nameDiv);
+    btn.appendChild(catDiv);
+    const globalIdx = ingredients.indexOf(ing);
+    btn.addEventListener('click', () => selectIngredient(globalIdx));
+    grid.appendChild(btn);
+  });
+}
+
+function selectIngredient(idx) {
+  selectedIdx = idx;
+  const ing = ingredients[idx];
+  renderGrid();
+
+  document.getElementById('detail').classList.remove('hidden');
+  document.getElementById('detail-name').textContent = ing.emoji + ' ' + ing.name;
+  document.getElementById('detail-category').textContent = ing.category;
+
+  const compDiv = document.getElementById('detail-compounds');
+  compDiv.innerHTML = ''; // xss-ok: static template, no user input
+  ing.compounds.forEach(c => {
+    const span = document.createElement('span');
+    span.className = 'bg-orange-800 text-orange-200 text-xs px-2 py-0.5 rounded-full';
+    span.textContent = c;
+    compDiv.appendChild(span);
+  });
+
+  const pairDiv = document.getElementById('detail-pairings');
+  pairDiv.innerHTML = ''; // xss-ok: static template, no user input
+  ing.pairings.forEach(p => {
+    const div = document.createElement('div');
+    div.className = 'bg-orange-800 rounded-lg p-3';
+    const name = document.createElement('div');
+    name.className = 'text-orange-200 font-semibold text-sm';
+    name.textContent = p.name;
+    const reason = document.createElement('div');
+    reason.className = 'text-orange-400 text-xs mt-0.5';
+    reason.textContent = p.reason;
+    div.appendChild(name);
+    div.appendChild(reason);
+    pairDiv.appendChild(div);
+  });
+}
+
+renderGrid();
+</script>
+</body>
+</html>
